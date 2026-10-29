@@ -1,0 +1,1527 @@
+<!--//win+R 打开终端输入//cd spark-backend//node server.js//运行此代码必须运行前面ai助手才能接入星火大模型-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>星闪鸿蒙数据中台</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <style>
+    :root{
+      --bg:#f5f7fa;
+      --card:#ffffff;
+      --text:#1f2d3d;
+      --muted:#6b7a90;
+      --primary:#2f80ed;
+      --primary-2:#1b66d1;
+      --danger:#e74c3c;
+      --ok:#27ae60;
+      --warn:#f39c12;
+      --line:#e8edf4;
+      --shadow: 0 10px 30px rgba(31,45,61,.08);
+      --radius:14px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden;
+    }
+
+    /* Layout */
+    .app{
+      display:flex;
+      height:100vh;
+      width:100vw;
+    }
+
+    .sidebar{
+      width:240px;
+      background:linear-gradient(180deg,#22324a,#1b2940);
+      color:#fff;
+      padding:18px 14px;
+      overflow:auto;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 10px 14px;
+      margin-bottom:10px;
+    }
+    .brand .logo{
+      width:36px;height:36px;border-radius:10px;
+      background:rgba(255,255,255,.12);
+      display:flex;align-items:center;justify-content:center;
+      font-size:18px;
+    }
+    .brand .title{
+      display:flex;flex-direction:column;line-height:1.1;
+    }
+    .brand .title b{font-size:14px;}
+    .brand .title span{font-size:12px;opacity:.8;}
+
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-top:8px;
+    }
+    .nav button{
+      border:none;
+      background:transparent;
+      color:#e8eefc;
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      text-align:left;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      transition:.15s;
+      font-size:14px;
+      opacity:.92;
+    }
+    .nav button:hover{
+      background:rgba(255,255,255,.08);
+      opacity:1;
+    }
+    .nav button.active{
+      background:rgba(47,128,237,.18);
+      outline:1px solid rgba(47,128,237,.35);
+      opacity:1;
+    }
+    .nav .icon{
+      width:22px;
+      display:inline-flex;
+      justify-content:center;
+    }
+
+    .main{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .topbar{
+      height:64px;
+      background:var(--card);
+      box-shadow: 0 2px 10px rgba(31,45,61,.06);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 18px;
+    }
+    .topbar .left{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .topbar .left .name{
+      font-size:16px;
+      font-weight:700;
+    }
+    .topbar .left .desc{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .topbar .right{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      background:#f1f5ff;
+      color:#2a5bd7;
+      border:1px solid #dbe6ff;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      white-space:nowrap;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:50%;
+      background:var(--ok);
+      display:inline-block;
+    }
+
+    .content{
+      flex:1;
+      overflow:auto;
+      padding:18px;
+    }
+
+    /* Cards / Grid */
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12,1fr);
+      gap:14px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      padding:14px;
+      min-height: 80px;
+    }
+    .card h3{
+      font-size:14px;
+      margin-bottom:10px;
+    }
+    .muted{color:var(--muted);font-size:12px;}
+    .kpi{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#fbfcff;
+    }
+    .kpi .value{font-size:22px;font-weight:800;}
+    .kpi .label{font-size:12px;color:var(--muted);}
+    .kpi .ico{font-size:20px;opacity:.9;}
+
+    .span-3{grid-column: span 3;}
+    .span-4{grid-column: span 4;}
+    .span-5{grid-column: span 5;}
+    .span-6{grid-column: span 6;}
+    .span-7{grid-column: span 7;}
+    .span-8{grid-column: span 8;}
+    .span-12{grid-column: span 12;}
+
+    /* Buttons */
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-size:13px;
+      transition:.12s;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      justify-content:center;
+      user-select:none;
+    }
+    .btn.primary{background:var(--primary);color:#fff;}
+    .btn.primary:hover{background:var(--primary-2);}
+    .btn.ghost{background:#f6f8fc;border:1px solid var(--line);color:var(--text);}
+    .btn.ghost:hover{background:#eef3ff;border-color:#d7e4ff;}
+    .btn.warn{background:#fff6e8;border:1px solid #ffe2b6;color:#8a5a00;}
+    .btn.warn:hover{background:#ffefd6;}
+    .btn.danger{background:#ffecec;border:1px solid #ffc7c7;color:#9b1d1d;}
+    .btn.danger:hover{background:#ffdede;}
+
+    /* Table */
+    table{
+      width:100%;
+      border-collapse:collapse;
+      overflow:hidden;
+      border-radius:12px;
+      border:1px solid var(--line);
+    }
+    th,td{
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      font-size:13px;
+    }
+    th{
+      background:#f8fafc;
+      color:#42526e;
+      font-weight:700;
+      font-size:12px;
+    }
+    tr:hover td{background:#fbfcff;}
+
+    .badge{
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      border:1px solid var(--line);
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      white-space:nowrap;
+    }
+    .badge.ok{background:#ecfff4;border-color:#bfead0;color:#1d7a46;}
+    .badge.off{background:#f3f5f7;border-color:#e2e7ee;color:#5e6c84;}
+    .badge.alarm{background:#ffecec;border-color:#ffc7c7;color:#9b1d1d;}
+
+    /* Map */
+    #map{
+      width:100%;
+      height:520px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      overflow:hidden;
+    }
+
+    /* AI chat */
+    .chat{
+      display:flex;
+      flex-direction:column;
+      height:560px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      background:#ffffff;
+    }
+    .chat .history{
+      flex:1;
+      overflow:auto;
+      padding:12px;
+      background:#fbfcff;
+    }
+    .msg{
+      max-width:78%;
+      padding:10px 12px;
+      border-radius:12px;
+      margin:8px 0;
+      border:1px solid var(--line);
+      font-size:13px;
+      line-height:1.35;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .msg.user{
+      margin-left:auto;
+      background:#e8f1ff;
+      border-color:#cfe0ff;
+    }
+    .msg.bot{
+      background:#ffffff;
+    }
+    .chat .composer{
+      display:flex;
+      gap:10px;
+      padding:10px;
+      border-top:1px solid var(--line);
+      background:#fff;
+    }
+    .chat input{
+      flex:1;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:13px;
+      outline:none;
+    }
+    .chat input:focus{border-color:#cfe0ff; box-shadow:0 0 0 3px rgba(47,128,237,.10);}
+
+    /* Toast */
+    .toast{
+      position:fixed;
+      right:16px;
+      bottom:16px;
+      width:340px;
+      background:#111827;
+      color:#fff;
+      padding:12px 12px;
+      border-radius:14px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.25);
+      display:none;
+      font-size:13px;
+      line-height:1.35;
+      z-index:9999;
+    }
+    .toast.show{display:block;}
+    .toast .small{opacity:.85;font-size:12px;margin-top:4px;}
+
+    @media (max-width: 980px){
+      .sidebar{width:210px;}
+      .span-3{grid-column: span 6;}
+      .span-4{grid-column: span 6;}
+      .span-5{grid-column: span 12;}
+      .span-6{grid-column: span 12;}
+      .span-7{grid-column: span 12;}
+      .span-8{grid-column: span 12;}
+    }
+  
+
+    /* ===== AI 模块样式（移植自可用版） ===== */
+/* AI 模块样式 */
+.ai-wrap{background:#fff;border-radius:8px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.ai-title{font-size:18px;font-weight:600;color:#2c3e50;margin-bottom:12px;}
+.ai-actions{display:flex;gap:10px;margin:10px 0 15px 0;}
+.ai-chat{
+  border:1px solid #ecf0f1;border-radius:8px;padding:12px;height:420px;overflow:auto;background:#fafbfc;
+  white-space:pre-wrap;
+}
+.ai-hint{margin-top:10px;color:#7f8c8d;font-size:12px;}
+
+/* ✅ 新增：自由对话输入区 */
+.ai-input-wrap{
+  margin: 10px 0 12px 0;
+  background:#fff;
+  border:1px solid #ecf0f1;
+  border-radius:8px;
+  padding:10px;
+}
+.ai-input{
+  width:100%;
+  resize: none;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  padding: 10px;
+  outline: none;
+  font-size: 14px;
+  background:#fff;
+}
+.ai-input:focus{
+  border-color:#3498db;
+  box-shadow:0 0 0 3px rgba(52,152,219,0.15);
+}
+.ai-input-actions{
+  margin-top:8px;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+</style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">✦</div>
+        <div class="title">
+          <b>星闪鸿蒙数据中台</b>
+          <span>API 版 v2</span>
+        </div>
+      </div>
+
+      <div class="nav" id="nav">
+        <button class="active" data-page="overview"><span class="icon">📊</span>数据概览</button>
+        <button data-page="monitor"><span class="icon">🗺️</span>实时监控</button>
+        <button data-page="device"><span class="icon">📡</span>设备管理</button>
+        <button data-page="alarm"><span class="icon">🚨</span>报警记录</button>
+        <button data-page="interface"><span class="icon">🔌</span>接口管理</button>
+        <button data-page="ai"><span class="icon">🤖</span>AI 应急助手</button>
+        <button data-page="log"><span class="icon">📋</span>系统日志</button>
+      </div>
+
+      <div style="margin-top:14px;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:12px;opacity:.9;margin-bottom:8px;">运行状态</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span class="pill" style="background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14);color:#fff;">
+            <span class="dot" id="dot-api" style="background:#f39c12;"></span>API
+          </span>
+          <span class="pill" style="background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14);color:#fff;">
+            <span class="dot" id="dot-ai" style="background:#f39c12;"></span>AI
+          </span>
+        </div>
+        <div class="muted" style="color:rgba(255,255,255,.75);margin-top:8px;">
+          若接口不可用，会自动降级为保守展示值。
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <div class="left">
+          <div class="name" id="pageTitle">数据概览</div>
+          <div class="desc" id="pageDesc">实时汇总设备状态与最新环境数据</div>
+        </div>
+        <div class="right">
+          <span class="pill" id="pillDevice">设备：2 台（1 真 + 1 占位）</span>
+          <span class="pill"><span class="dot" id="dotClock"></span><span id="clockText">--</span></span>
+          <button class="btn ghost" id="btnRefresh">⟳ 刷新</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- Overview -->
+        <div class="page" id="page-overview">
+          <div class="grid">
+            <div class="card span-3">
+              <div class="kpi">
+                <div>
+                  <div class="value" id="kpi-total">2</div>
+                  <div class="label">设备总数</div>
+                </div>
+                <div class="ico">📱</div>
+              </div>
+            </div>
+            <div class="card span-3">
+              <div class="kpi">
+                <div>
+                  <div class="value" id="kpi-online">1</div>
+                  <div class="label">在线设备</div>
+                </div>
+                <div class="ico">✅</div>
+              </div>
+            </div>
+            <div class="card span-3">
+              <div class="kpi">
+                <div>
+                  <div class="value" id="kpi-alarm">0</div>
+                  <div class="label">报警设备</div>
+                </div>
+                <div class="ico">🚨</div>
+              </div>
+            </div>
+            <div class="card span-3">
+              <div class="kpi">
+                <div>
+                  <div class="value" id="kpi-offline">1</div>
+                  <div class="label">离线设备</div>
+                </div>
+                <div class="ico">📴</div>
+              </div>
+            </div>
+
+            <div class="card span-6">
+              <h3>设备状态分布</h3>
+              <div class="muted">保守值：默认 1 在线 + 1 离线，报警需要后端明确给出</div>
+              <div id="chartStatus" style="height:320px;margin-top:10px;"></div>
+            </div>
+
+            <div class="card span-6">
+              <h3>最新环境数据（真实 API）</h3>
+              <div class="muted">来源：/api/device/latest（deviceNo = Cjy9874123）</div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+                <div class="kpi">
+                  <div>
+                    <div class="value" id="latest-device">Cjy9874123</div>
+                    <div class="label">设备编号</div>
+                  </div>
+                  <div class="ico">🧩</div>
+                </div>
+                <div class="kpi">
+                  <div>
+                    <div class="value" id="latest-time">--</div>
+                    <div class="label">更新时间</div>
+                  </div>
+                  <div class="ico">🕒</div>
+                </div>
+                <div class="kpi">
+                  <div>
+                    <div class="value" id="latest-temp">--</div>
+                    <div class="label">温度 (°C)</div>
+                  </div>
+                  <div class="ico">🌡️</div>
+                </div>
+                <div class="kpi">
+                  <div>
+                    <div class="value" id="latest-humi">--</div>
+                    <div class="label">湿度 (%)</div>
+                  </div>
+                  <div class="ico">💧</div>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px;margin-top:12px;">
+                <button class="btn primary" id="btnJumpMap">🗺️ 查看地图</button>
+                <button class="btn ghost" id="btnHealth">🧪 保守阈值说明</button>
+                <button class="btn ghost" id="btnLatestRefresh">🔄</button>
+              </div>
+
+              <div class="muted" style="margin-top:10px;">
+                保守报警规则（前端用于演示）：温度 ≥ 45 或 湿度 ≤ 5 才标记为报警。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monitor -->
+        <div class="page" id="page-monitor" style="display:none;">
+          <div class="grid">
+            <div class="card span-12">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                <div>
+                  <h3>实时监控地图</h3>
+                  <div class="muted">设备 2 台：1 台来自 API（环境监测），1 台占位离线（基站）</div>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <button class="btn ghost" id="btnMarkers">📍 设备标记</button>
+                  <button class="btn ghost" id="btnHeat">🔥 热力图</button>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;" id="map"></div>
+            </div>
+
+            <div class="card span-12">
+              <h3>设备快照</h3>
+              <div class="muted">展示当前地图上的设备状态（保守值）</div>
+              <div style="margin-top:10px;overflow:auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>设备ID</th>
+                      <th>类型</th>
+                      <th>状态</th>
+                      <th>温度</th>
+                      <th>湿度</th>
+                      <th>坐标</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tblDevices"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Device -->
+        <div class="page" id="page-device" style="display:none;">
+          <div class="grid">
+            <div class="card span-12">
+              <h3>设备管理（保守展示）</h3>
+              <div class="muted">你目前只有 1 台真实设备（Cjy9874123），第二台用于演示整体框架</div>
+              <div style="margin-top:10px;overflow:auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>设备ID</th>
+                      <th>设备名称</th>
+                      <th>类型</th>
+                      <th>状态</th>
+                      <th>最近数据时间</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tblDeviceMgmt"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alarm -->
+        <div class="page" id="page-alarm" style="display:none;">
+          <div class="grid">
+            <div class="card span-6">
+              <h3>报警统计（保守值）</h3>
+              <div class="muted">没有接 alarm_log API 前，按保守演示值 0~2 波动</div>
+              <div id="chartAlarm" style="height:320px;margin-top:10px;"></div>
+            </div>
+
+            <div class="card span-6">
+              <h3>报警列表（占位）</h3>
+              <div class="muted">后续可接：/api/alarm/list</div>
+              <div style="margin-top:10px;overflow:auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>报警ID</th>
+                      <th>设备</th>
+                      <th>类型</th>
+                      <th>时间</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tblAlarms"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interface -->
+        <div class="page" id="page-interface" style="display:none;">
+          <div class="grid">
+            <div class="card span-12">
+              <h3>统一接口管理（保守值）</h3>
+              <div class="muted">后端接入后可改为真实统计：/api/metrics</div>
+              <div id="chartApi" style="height:320px;margin-top:10px;"></div>
+
+              <div style="margin-top:12px;overflow:auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>接口</th>
+                      <th>调用次数</th>
+                      <th>平均响应</th>
+                      <th>成功率</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tblApi"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+                <!-- AI -->
+        <div class="page" id="page-ai" style="display:none;">
+          <div class="grid">
+            <div class="card span-12">
+              <div class="ai-wrap">
+                <div class="ai-title">AI 应急助手（报警 / 人员联动）</div>
+
+                <div class="ai-actions">
+                  <button class="btn warn" onclick="aiAnalyzeCurrentAlarms()">分析当前报警</button>
+                  <button class="btn primary" onclick="aiGeneratePlan()">一键生成应急处置方案</button>
+                </div>
+
+                <!-- ✅ 自由对话输入区 -->
+                <div class="ai-input-wrap">
+                  <textarea id="ai-input" class="ai-input" rows="2"
+                            placeholder="在这里直接问问题…（Enter 发送，Shift+Enter 换行）"></textarea>
+                  <div class="ai-input-actions">
+                    <button class="btn primary" onclick="aiSendFreeQuestion()">发送</button>
+                    <button class="btn ghost" onclick="aiClearChat()">清空对话</button>
+                  </div>
+                </div>
+
+                <div id="ai-chat" class="ai-chat"></div>
+
+                <div class="ai-hint">
+                  说明：后端接口：<code id="ai-api-hint">http://localhost:3000/api/spark/chat</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log -->
+        <div class="page" id="page-log" style="display:none;">
+          <div class="grid">
+            <div class="card span-12">
+              <h3>系统日志（保守值）</h3>
+              <div class="muted">建议后端接入：/api/logs</div>
+              <div style="margin-top:10px;overflow:auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>时间</th>
+                      <th>级别</th>
+                      <th>模块</th>
+                      <th>消息</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tblLogs"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast">
+    <div id="toastMsg">提示</div>
+    <div class="small" id="toastSub"></div>
+  </div>
+
+<script>
+/* ===========================
+   配置：你只改这里两行即可
+=========================== */
+const API_BASE = "http://localhost:5000";
+const REAL_DEVICE_NO = "698b5199cbb";
+
+/* 数据库没经纬度：先固定一个点（保守）
+   后面你加 lat/lng 后，我再帮你改成真定位 */
+const FIXED_COORD = [39.125596, 117.320004];
+const PLACEHOLDER_COORD = [FIXED_COORD[0] + 0.0012, FIXED_COORD[1] + 0.0012];
+
+/* 设备数要求：2（1真 + 1占位） */
+const DEVICE_TOTAL = 2;
+
+/* 保守报警规则：更不容易触发 */
+function isAlarmByConservativeRule(temp, humi){
+  const t = Number(temp), h = Number(humi);
+  if (!Number.isNaN(t) && t >= 45) return true;
+  if (!Number.isNaN(h) && h <= 5) return true;
+  return false;
+}
+
+/* ===========================
+   UI 小工具
+=========================== */
+const $ = (sel) => document.querySelector(sel);
+
+function toast(msg, sub=""){
+  const el = $("#toast");
+  $("#toastMsg").innerText = msg;
+  $("#toastSub").innerText = sub;
+  el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"), 2600);
+}
+
+function setDot(id, ok){
+  const dot = document.getElementById(id);
+  if(!dot) return;
+  dot.style.background = ok ? "var(--ok)" : "var(--warn)";
+}
+
+/* ===========================
+   API（带降级）
+=========================== */
+async function safeFetchJSON(url, options){
+  try{
+    const resp = await fetch(url, options);
+    if(!resp.ok) throw new Error("HTTP " + resp.status);
+    return await resp.json();
+  }catch(e){
+    return null;
+  }
+}
+
+async function apiLatestEnv(){
+  return await safeFetchJSON(`${API_BASE}/api/device/latest?deviceNo=${encodeURIComponent(REAL_DEVICE_NO)}`);
+}
+
+async function apiOverview(){
+  return await safeFetchJSON(`${API_BASE}/api/overview?deviceNo=${encodeURIComponent(REAL_DEVICE_NO)}`);
+}
+
+async function apiAiChat(messages){
+  return await safeFetchJSON(`${API_BASE}/api/ai/chat`, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({messages})
+  });
+}
+
+/* ===========================
+   App State
+=========================== */
+const state = {
+  page: "overview",
+  devices: [],
+  overview: { deviceTotal: DEVICE_TOTAL, online: 1, offline: 1, alarm: 0 },
+  latest: { deviceNo: REAL_DEVICE_NO, temperature: null, humidity: null, createTime: null },
+  charts: {},
+  map: null,
+  mapMarkers: [],
+  heat: null,
+  showHeat: false,
+  chat: [{role:"assistant", content:"我是应急数据中台 AI 助手。你可以让我分析态势或生成处置方案。"}],
+  apiOk: false,
+  aiOk: false,
+};
+
+/* ===========================
+   Build Devices (1 real + 1 placeholder)
+=========================== */
+function rebuildDevicesFromLatest(latest){
+  // Real device
+  const t = latest?.temperature;
+  const h = latest?.humidity;
+  const alarm = isAlarmByConservativeRule(t,h);
+  const dev1 = {
+    id: latest?.deviceNo || REAL_DEVICE_NO,
+    name: "环境监测设备（真实）",
+    type: "environment",
+    status: alarm ? "alarm" : "online",
+    coord: FIXED_COORD,
+    temp: t==null ? 0 : Number(t),
+    humi: h==null ? 0 : Number(h),
+    time: latest?.createTime || latest?.eventTime || "--",
+  };
+
+  // Placeholder device: offline, conservative values
+  const dev2 = {
+    id: "D002_PLACEHOLDER",
+    name: "基站设备（占位）",
+    type: "base",
+    status: "offline",
+    coord: PLACEHOLDER_COORD,
+    temp: 0,
+    humi: 0,
+    time: "--",
+  };
+
+  state.devices = [dev1, dev2];
+
+  // overview (保守：默认 1 online + 1 offline，alarm 由 real 设备是否 alarm 决定)
+  const alarmCount = dev1.status === "alarm" ? 1 : 0;
+  const onlineCount = 1; // 占位设备离线
+  const offlineCount = DEVICE_TOTAL - onlineCount;
+  state.overview = {
+    deviceTotal: DEVICE_TOTAL,
+    online: onlineCount,
+    offline: offlineCount,
+    alarm: alarmCount
+  };
+}
+
+/* ===========================
+   Render: Overview KPIs & Latest
+=========================== */
+function renderOverview(){
+  $("#kpi-total").innerText = state.overview.deviceTotal;
+  $("#kpi-online").innerText = state.overview.online;
+  $("#kpi-offline").innerText = state.overview.offline;
+  $("#kpi-alarm").innerText = state.overview.alarm;
+
+  $("#latest-device").innerText = state.latest.deviceNo || REAL_DEVICE_NO;
+  $("#latest-time").innerText = state.latest.createTime || state.latest.eventTime || "--";
+  $("#latest-temp").innerText = state.latest.temperature ?? "--";
+  $("#latest-humi").innerText = state.latest.humidity ?? "--";
+}
+
+/* ===========================
+   Charts
+=========================== */
+function ensureChart(id){
+  const dom = document.getElementById(id);
+  if(!dom) return null;
+  let chart = echarts.getInstanceByDom(dom);
+  if(!chart) chart = echarts.init(dom);
+  return chart;
+}
+
+function renderStatusChart(){
+  const chart = ensureChart("chartStatus");
+  if(!chart) return;
+
+  const data = [
+    {value: state.overview.online, name:"在线"},
+    {value: state.overview.offline, name:"离线"},
+    {value: state.overview.alarm, name:"报警"},
+  ];
+
+  chart.setOption({
+    tooltip:{trigger:"item"},
+    legend:{top:0},
+    series:[{
+      name:"设备状态",
+      type:"pie",
+      radius:["35%","70%"],
+      avoidLabelOverlap:true,
+      label:{show:true},
+      data
+    }]
+  });
+}
+
+function renderAlarmChart(){
+  const chart = ensureChart("chartAlarm");
+  if(!chart) return;
+
+  // 保守演示：小波动
+  const base = state.overview.alarm;
+  const series = [0,0,base,0,0,Math.min(2,base),0];
+  chart.setOption({
+    tooltip:{trigger:"axis"},
+    xAxis:{type:"category", data:["-6","-5","-4","-3","-2","-1","现在"]},
+    yAxis:{type:"value"},
+    series:[{type:"line", smooth:true, data:series, name:"报警次数"}]
+  });
+}
+
+function renderApiChart(){
+  const chart = ensureChart("chartApi");
+  if(!chart) return;
+
+  // 保守：小调用次数、小响应
+  const names = ["latestEnv","overview","aiChat","healthPing","report"];
+  const calls = [8, 8, 2, 6, 4];
+  const ms = [30, 25, 120, 18, 40];
+
+  chart.setOption({
+    tooltip:{trigger:"axis"},
+    legend:{top:0},
+    xAxis:{type:"category", data:names},
+    yAxis:[
+      {type:"value", name:"调用次数"},
+      {type:"value", name:"响应(ms)"}
+    ],
+    series:[
+      {name:"调用次数", type:"bar", data:calls},
+      {name:"响应(ms)", type:"line", yAxisIndex:1, smooth:true, data:ms}
+    ]
+  });
+
+  // table
+  const tbody = $("#tblApi");
+  tbody.innerHTML = "";
+  const rows = [
+    ["GET /api/device/latest", 8, "25~40ms", "99.0%", "正常"],
+    ["GET /api/overview", 8, "20~35ms", "99.0%", "正常"],
+    ["POST /api/ai/chat", 2, "80~200ms", "95.0%", "可用"],
+    ["GET /api/health", 6, "10~25ms", "99.5%", "正常"],
+    ["POST /api/report", 4, "30~60ms", "98.0%", "正常"],
+  ];
+  for(const r of rows){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r[0]}</td>
+      <td>${r[1]}</td>
+      <td>${r[2]}</td>
+      <td>${r[3]}</td>
+      <td><span class="badge ok"><span class="dot"></span>${r[4]}</span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+/* ===========================
+   Map
+=========================== */
+function initMapIfNeeded(){
+  if(state.map) return;
+
+  state.map = L.map('map').setView(FIXED_COORD, 13);
+  L.tileLayer(
+    'https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+    {maxZoom: 18, minZoom: 5, attribution: '&copy; 高德地图'}
+  ).addTo(state.map);
+
+  state.heat = L.heatLayer([], {radius: 25, blur: 15, maxZoom: 15, max: 10});
+
+  $("#btnMarkers").addEventListener("click", ()=>{
+    state.showHeat = false;
+    renderMap();
+  });
+  $("#btnHeat").addEventListener("click", ()=>{
+    state.showHeat = true;
+    renderMap();
+  });
+}
+
+function clearMapLayers(){
+  if(!state.map) return;
+  state.mapMarkers.forEach(m=>m.remove());
+  state.mapMarkers = [];
+  if(state.heat) state.map.removeLayer(state.heat);
+}
+
+function statusBadge(status){
+  if(status==="online") return `<span class="badge ok"><span class="dot"></span>在线</span>`;
+  if(status==="alarm") return `<span class="badge alarm"><span class="dot" style="background:var(--danger)"></span>报警</span>`;
+  return `<span class="badge off"><span class="dot" style="background:#9aa4b2"></span>离线</span>`;
+}
+
+function renderMap(){
+  if(!state.map) return;
+  clearMapLayers();
+
+  if(state.showHeat){
+    const pts = state.devices.map(d => [d.coord[0], d.coord[1], d.status==="alarm" ? 10 : (d.status==="online"?6:2)]);
+    state.heat.setLatLngs(pts);
+    state.heat.addTo(state.map);
+  }else{
+    for(const d of state.devices){
+      const color = d.status==="alarm" ? "red" : (d.status==="online"?"green":"gray");
+      const icon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 6px rgba(0,0,0,.25)"></div>`,
+        iconSize:[18,18],
+        iconAnchor:[9,9]
+      });
+      const m = L.marker(d.coord, {icon});
+      m.bindPopup(`
+        <div style="min-width:190px">
+          <b>${d.name}</b><br/>
+          设备ID：${d.id}<br/>
+          类型：${d.type}<br/>
+          状态：${d.status}<br/>
+          温度：${d.temp} °C<br/>
+          湿度：${d.humi} %<br/>
+          时间：${d.time}<br/>
+          坐标：${d.coord[0].toFixed(6)}, ${d.coord[1].toFixed(6)}
+        </div>
+      `);
+      m.addTo(state.map);
+      state.mapMarkers.push(m);
+    }
+  }
+
+  // devices table snapshot
+  const tbody = $("#tblDevices");
+  tbody.innerHTML = "";
+  for(const d of state.devices){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.id}</td>
+      <td>${d.type}</td>
+      <td>${statusBadge(d.status)}</td>
+      <td>${d.temp}</td>
+      <td>${d.humi}</td>
+      <td>${d.coord[0].toFixed(6)}, ${d.coord[1].toFixed(6)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+/* ===========================
+   Tables: Device Mgmt / Alarm / Logs
+=========================== */
+function renderDeviceMgmt(){
+  const tbody = $("#tblDeviceMgmt");
+  tbody.innerHTML = "";
+  for(const d of state.devices){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.id}</td>
+      <td>${d.name}</td>
+      <td>${d.type}</td>
+      <td>${statusBadge(d.status)}</td>
+      <td>${d.time}</td>
+      <td><button class="btn ghost" onclick="alert('查看详情：${d.id}')">查看</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderAlarms(){
+  const tbody = $("#tblAlarms");
+  tbody.innerHTML = "";
+
+  // 保守占位：如果 real 设备报警，则生成 1 条，否则空
+  if(state.overview.alarm <= 0){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="5" class="muted">暂无报警（保守展示）</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  const now = new Date();
+  const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>A-${now.getTime().toString().slice(-5)}</td>
+    <td>${REAL_DEVICE_NO}</td>
+    <td>环境阈值触发（保守规则）</td>
+    <td>${ts}</td>
+    <td>${statusBadge("alarm")}</td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function renderLogs(){
+  const tbody = $("#tblLogs");
+  tbody.innerHTML = "";
+  const now = new Date();
+  const rows = [
+    ["INFO","系统","前端页面加载完成"],
+    ["INFO","API","最新数据刷新（若失败则降级）"],
+    ["WARN","AI","AI 接口未实现时会返回降级提示"],
+  ];
+  for(const r of rows){
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${ts}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+/* ===========================
+   AI Chat
+=========================== */
+function renderChat(){
+  const box = $("#chatHistory");
+  box.innerHTML = "";
+  for(const m of state.chat){
+    const div = document.createElement("div");
+    div.className = "msg " + (m.role==="user" ? "user" : "bot");
+    div.textContent = m.content;
+    box.appendChild(div);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat(text){
+  if(!text.trim()) return;
+
+  state.chat.push({role:"user", content:text});
+  state.chat.push({role:"assistant", content:"思考中..."});
+  renderChat();
+
+  const messages = [
+    {role:"system", content:"你是应急救援数据中台AI助手，回答要专业、结构化、保守。"},
+    {role:"user", content: text + "\n\n当前设备快照：" + JSON.stringify(state.devices, null, 2)}
+  ];
+
+  const res = await apiAiChat(messages);
+
+  // 判断 AI API 是否可用
+  if(res && (res.reply || res.content)){
+    state.aiOk = true;
+    setDot("dot-ai", true);
+    const reply = res.reply || res.content;
+    state.chat[state.chat.length-1] = {role:"assistant", content: reply};
+  }else{
+    state.aiOk = false;
+    setDot("dot-ai", false);
+    state.chat[state.chat.length-1] = {role:"assistant", content: "AI 接口不可用（/api/ai/chat）。请确认后端已实现并允许 CORS。"};
+  }
+  renderChat();
+}
+
+/* ===========================
+   Page Switch
+=========================== */
+const pageMeta = {
+  overview: {title:"数据概览", desc:"实时汇总设备状态与最新环境数据"},
+  monitor:  {title:"实时监控", desc:"地图监控设备分布（1 真 + 1 占位）"},
+  device:   {title:"设备管理", desc:"设备列表与状态（保守展示）"},
+  alarm:    {title:"报警记录", desc:"报警统计与列表（可接 alarm_log API）"},
+  interface:{title:"接口管理", desc:"接口调用统计（保守值）"},
+  ai:       {title:"AI 应急助手", desc:"对话框 + 报警分析（可用版接口）"},
+  log:      {title:"系统日志", desc:"系统运行事件（保守展示）"},
+};
+
+function showPage(page){
+  state.page = page;
+
+  // nav style
+  document.querySelectorAll("#nav button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.page===page);
+  });
+
+  // pages
+  document.querySelectorAll(".page").forEach(p=>p.style.display="none");
+  document.getElementById("page-"+page).style.display="block";
+
+  // title
+  $("#pageTitle").innerText = pageMeta[page].title;
+  $("#pageDesc").innerText = pageMeta[page].desc;
+
+  // on enter
+  if(page==="overview"){
+    renderOverview();
+    renderStatusChart();
+  }
+  if(page==="monitor"){
+    initMapIfNeeded();
+    renderMap();
+  }
+  if(page==="device"){
+    renderDeviceMgmt();
+  }
+  if(page==="alarm"){
+    renderAlarmChart();
+    renderAlarms();
+  }
+  if(page==="interface"){
+    renderApiChart();
+  }
+  if(page==="ai"){
+    if (typeof renderAI === "function") renderAI();
+    else if (typeof renderChat === "function") renderChat();
+  }
+  if(page==="log"){
+    renderLogs();
+  }
+}
+
+/* ===========================
+   Refresh Cycle
+=========================== */
+async function refreshAll(){
+  // latest env
+  const env = await apiLatestEnv();
+  if(env){
+    state.apiOk = true;
+    setDot("dot-api", true);
+    state.latest = env;
+  }else{
+    state.apiOk = false;
+    setDot("dot-api", false);
+    // 降级：不改变 latest（保守）
+  }
+
+  rebuildDevicesFromLatest(state.latest);
+
+  // overview from API（可选）
+  const ov = await apiOverview();
+  if(ov){
+    // 你要求设备=2，所以总数锁死2，其他值取后端但做保护
+    const online = Number(ov.online ?? 1);
+    const alarm = Number(ov.alarm ?? state.overview.alarm ?? 0);
+    const onlineClamped = Math.max(0, Math.min(2, online));
+    const alarmClamped = Math.max(0, Math.min(2, alarm));
+    state.overview.online = onlineClamped;
+    state.overview.alarm = alarmClamped;
+    state.overview.offline = 2 - onlineClamped;
+  }
+
+  // Render current page
+  if(state.page==="overview"){
+    renderOverview();
+    renderStatusChart();
+  }else if(state.page==="monitor"){
+    renderMap();
+  }else if(state.page==="device"){
+    renderDeviceMgmt();
+  }else if(state.page==="alarm"){
+    renderAlarmChart();
+    renderAlarms();
+  }else if(state.page==="interface"){
+    renderApiChart();
+  }else if(state.page==="log"){
+    renderLogs();
+  }
+
+  if(!state.apiOk){
+    toast("API 未连接", "请确认后端地址、端口、CORS，以及接口是否可访问。");
+  }
+}
+
+/* ===========================
+   Init
+=========================== */
+function tickClock(){
+  const now = new Date();
+  $("#clockText").innerText = now.toLocaleString();
+  $("#dotClock").style.background = "var(--ok)";
+}
+setInterval(tickClock, 1000);
+
+document.querySelectorAll("#nav button").forEach(btn=>{
+  btn.addEventListener("click", ()=>showPage(btn.dataset.page));
+});
+
+$("#btnRefresh").addEventListener("click", ()=>refreshAll());
+const __btnLatestRefresh = $("#btnLatestRefresh");
+if(__btnLatestRefresh) __btnLatestRefresh.addEventListener("click", ()=>refreshAll());
+
+$("#btnJumpMap").addEventListener("click", ()=>showPage("monitor"));
+$("#btnHealth").addEventListener("click", ()=>{
+  toast("保守阈值", "报警：温度≥45 或 湿度≤5。你要更敏感也可以改成 35/10。");
+});
+
+const __btnAnalyze = $("#btnAnalyze");
+if(__btnAnalyze) __btnAnalyze.addEventListener("click", ()=>{
+  const prompt = "请分析当前系统态势：设备状态、温湿度是否异常、有什么风险提示？请保守判断。";
+  sendChat(prompt);
+});
+const __btnPlan = $("#btnPlan");
+if(__btnPlan) __btnPlan.addEventListener("click", ()=>{
+  const prompt = "基于当前设备快照，生成一份应急处置方案：态势评估、风险等级、处置步骤、人员/资源建议、后续监测。";
+  sendChat(prompt);
+});
+const __btnClearChat = $("#btnClearChat");
+if(__btnClearChat) __btnClearChat.addEventListener("click", ()=>{
+  state.chat = [{role:"assistant", content:"已清空对话。我仍然是应急数据中台 AI 助手。"}];
+  renderChat();
+});
+
+const __btnSend = $("#btnSend");
+if(__btnSend) __btnSend.addEventListener("click", ()=>{
+  const input = $("#chatInput");
+  const text = input.value;
+  input.value = "";
+  sendChat(text);
+});
+const __chatInput = $("#chatInput");
+if(__chatInput) __chatInput.addEventListener("keydown", (e)=>{
+  if(e.key==="Enter"){
+    $("#btnSend").click();
+  }
+});
+
+// 首次进入
+tickClock();
+showPage("overview");
+refreshAll();
+
+// 自动刷新：每 3 秒（你可改 1000 更快，但别太频繁）
+setInterval(()=>refreshAll(), 3000);
+
+
+/* ================= AI 应急助手（移植自可用版：localhost:3000/api/spark/chat） ================= */
+const AI_API_URL = "http://localhost:3000/api/spark/chat";
+
+let aiHistory = [
+  { role: "assistant", content: "我是应急数据中台 AI 助手，可自动分析报警并生成处置方案。" }
+];
+
+function renderAI() {
+  const chat = document.getElementById("ai-chat");
+  if (!chat) return;
+
+  chat.innerHTML = "";
+  aiHistory.forEach(msg => {
+    const div = document.createElement("div");
+    div.style.margin = "8px 0";
+    div.style.maxWidth = "80%";
+    div.style.padding = "8px 10px";
+    div.style.borderRadius = "6px";
+    div.style.wordBreak = "break-word";
+    div.style.whiteSpace = "pre-wrap";
+
+    if (msg.role === "user") {
+      div.style.marginLeft = "auto";
+      div.style.background = "#3498db";
+      div.style.color = "#fff";
+    } else {
+      div.style.background = "#f1f3f5";
+    }
+
+    div.innerText = msg.content;
+    chat.appendChild(div);
+  });
+
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* ===== 兼容：从新版报警表读取（#tblAlarms）===== */
+function collectAlarmData() {
+  const rows = document.querySelectorAll("#tblAlarms tr");
+  const alarms = [];
+  rows.forEach(r => {
+    const tds = r.querySelectorAll("td");
+    if (tds.length < 5) return; // “暂无报警”合并行跳过
+    alarms.push({
+      id: (tds[0].innerText || "").trim(),
+      device: (tds[1].innerText || "").trim(),
+      type: (tds[2].innerText || "").trim(),
+      time: (tds[3].innerText || "").trim(),
+      status: (tds[4].innerText || "").trim()
+    });
+  });
+  return alarms;
+}
+
+/* ===== 新版目前没有人员表：返回空即可，不影响使用 ===== */
+function collectPersonAbnormal() { return []; }
+
+async function aiAnalyzeCurrentAlarms() {
+  const alarms = collectAlarmData();
+  const persons = collectPersonAbnormal();
+
+  aiHistory.push({ role: "user", content: "请分析当前系统报警态势，并指出重点风险。" });
+  aiHistory.push({ role: "assistant", content: "分析中..." });
+  renderAI();
+
+  const prompt = `
+当前报警数据：
+${JSON.stringify(alarms, null, 2)}
+
+异常人员：
+${JSON.stringify(persons, null, 2)}
+
+请进行风险分析，说明主要问题。
+`;
+  await callAI(prompt);
+}
+
+async function aiGeneratePlan() {
+  const alarms = collectAlarmData();
+  const persons = collectPersonAbnormal();
+
+  aiHistory.push({ role: "user", content: "基于当前报警和人员状态，生成一份完整的应急处置方案。" });
+  aiHistory.push({ role: "assistant", content: "方案生成中..." });
+  renderAI();
+
+  const prompt = `
+你是应急指挥专家。
+
+报警数据：
+${JSON.stringify(alarms, null, 2)}
+
+人员异常数据：
+${JSON.stringify(persons, null, 2)}
+
+请输出一份【应急处置方案】，包含：
+1. 当前态势评估
+2. 风险等级判断
+3. 处置步骤（分点）
+4. 人员调度建议
+5. 后续监测措施
+`;
+  await callAI(prompt);
+}
+
+async function aiSendFreeQuestion() {
+  const input = document.getElementById("ai-input");
+  const text = (input?.value || "").trim();
+  if (!text) return;
+
+  input.value = "";
+  aiHistory.push({ role: "user", content: text });
+  aiHistory.push({ role: "assistant", content: "思考中..." });
+  renderAI();
+
+  await callAI(text);
+}
+
+function aiClearChat() {
+  aiHistory = [
+    { role: "assistant", content: "我是应急数据中台 AI 助手，可自动分析报警并生成处置方案。" }
+  ];
+  renderAI();
+}
+
+/* Enter 发送，Shift+Enter 换行（仅在 AI 输入框聚焦时生效） */
+document.addEventListener("keydown", function (e) {
+  const active = document.activeElement;
+  if (!active || active.id !== "ai-input") return;
+
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    aiSendFreeQuestion();
+  }
+});
+
+async function callAI(prompt) {
+  const thinkingIndex = aiHistory.length - 1;
+
+  try {
+    const resp = await fetch(AI_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "你是应急救援数据中台AI助手，回答专业、结构化。" },
+          { role: "user", content: prompt }
+        ]
+      })
+    });
+
+    const rawText = await resp.text();
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${rawText}`);
+
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch { throw new Error("后端返回不是 JSON：\n" + rawText); }
+
+    aiHistory[thinkingIndex] = {
+      role: "assistant",
+      content: data.reply || data.error || "（模型未返回文本）"
+    };
+
+    // 点亮侧栏 AI 状态灯（存在才点亮）
+    if (typeof setDot === "function") setDot("dot-ai", true);
+  } catch (e) {
+    aiHistory[thinkingIndex] = {
+      role: "assistant",
+      content: "请求失败（真实错误）:\n" + String(e?.message || e)
+    };
+    if (typeof setDot === "function") setDot("dot-ai", false);
+  }
+
+  renderAI();
+}
+
+/* 页面加载：同步显示的 API 文本，并初始化一次 */
+window.addEventListener("load", () => {
+  const hint = document.getElementById("ai-api-hint");
+  if (hint) hint.textContent = AI_API_URL;
+  renderAI();
+});
+</script>
+</body>
+</html>

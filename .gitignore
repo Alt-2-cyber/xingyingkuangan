@@ -1,0 +1,49 @@
+# Local deployment settings and backups
+settings.local.json
+*.local.h
+.publication-private/
+.run/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+*.pyc
+__pycache__/
+.venv/
+venv/
+node_modules/
+.idea/
+.vscode/
+.DS_Store
+
+# SDK source under src/build is required; only generated outputs are ignored.
+/fbb_ws63/src/output/
+/fbb_ws63/src/analyzerJson/
+/fbb_ws63/src/tools/bin/compiler/
+/fbb_ws63/src/tools/bin/sign_tool/*/private_key*
+**/CMakeFiles/
+**/CMakeCache.txt
+**/.ninja_deps
+**/.ninja_log
+
+# Downloaded archives, manuals and document exports remain on the local disk.
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.mp4
+*.exe
+*.msi
+*.bak
+* - 副本.py

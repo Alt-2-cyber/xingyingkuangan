@@ -1,0 +1,3 @@
+#pragma once
+#define CONFIG_WIFI_SSID "YOUR_WIFI_SSID"
+#define CONFIG_WIFI_PWD "YOUR_WIFI_PASSWORD"
